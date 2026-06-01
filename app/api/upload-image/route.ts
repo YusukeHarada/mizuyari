@@ -28,15 +28,26 @@ export async function POST(request: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const webpBuffer = await sharp(buffer)
-    .rotate()             // EXIF方向を自動補正
+    .rotate()
     .resize(400, 400, { fit: 'cover', position: 'centre' })
     .webp({ quality: 80 })
     .toBuffer();
 
-  const filename = `plants/${uid}/${Date.now()}.webp`;
   const bucket = adminStorage().bucket();
-  const fileRef = bucket.file(filename);
 
+  // 旧画像を削除（変更時）
+  const oldUrl = formData.get('oldUrl') as string | null;
+  if (oldUrl) {
+    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!;
+    const prefix = `https://storage.googleapis.com/${bucketName}/`;
+    if (oldUrl.startsWith(prefix)) {
+      const oldPath = decodeURIComponent(oldUrl.slice(prefix.length));
+      await bucket.file(oldPath).delete().catch(() => {});
+    }
+  }
+
+  const filename = `plants/${uid}/${Date.now()}.webp`;
+  const fileRef = bucket.file(filename);
   await fileRef.save(webpBuffer, { contentType: 'image/webp' });
   await fileRef.makePublic();
 
