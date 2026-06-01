@@ -26,42 +26,56 @@ function toDate(val: unknown): Date | null {
 export default function PlantDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const [uid, setUid] = useState<string | null>(null);
   const [plant, setPlant] = useState<Plant | null>(null);
   const [logs, setLogs] = useState<WateringLog[]>([]);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function fetchData() {
-    const plantSnap = await getDoc(doc(db, 'plants', params.id));
-    if (plantSnap.exists()) {
-      setPlant({ id: plantSnap.id, ...plantSnap.data() } as Plant);
-    }
+  async function fetchData(userId: string) {
+    try {
+      const plantSnap = await getDoc(doc(db, 'plants', params.id));
+      if (plantSnap.exists()) {
+        setPlant({ id: plantSnap.id, ...plantSnap.data() } as Plant);
+      }
 
-    // orderBy なし → クライアントソートでインデックス不要
-    const logsSnap = await getDocs(
-      query(collection(db, 'watering_logs'), where('plantId', '==', params.id))
-    );
-    const logList = logsSnap.docs
-      .map(d => {
-        const data = d.data();
-        const ts = toDate(data.wateredAt);
-        return {
-          id: d.id,
-          plantId: data.plantId,
-          wateredAt: ts ? ts.toISOString() : '',
-        } as WateringLog;
-      })
-      .filter(l => l.wateredAt)
-      .sort((a, b) => new Date(b.wateredAt).getTime() - new Date(a.wateredAt).getTime())
-      .slice(0, 20);
-    setLogs(logList);
-    setLoading(false);
+      // userId を条件に追加してルールに適合させる（orderBy なし → クライアントソート）
+      const logsSnap = await getDocs(
+        query(
+          collection(db, 'watering_logs'),
+          where('plantId', '==', params.id),
+          where('userId', '==', userId),
+        )
+      );
+      const logList = logsSnap.docs
+        .map(d => {
+          const data = d.data();
+          const ts = toDate(data.wateredAt);
+          return {
+            id: d.id,
+            plantId: data.plantId,
+            wateredAt: ts ? ts.toISOString() : '',
+          } as WateringLog;
+        })
+        .filter(l => l.wateredAt)
+        .sort((a, b) => new Date(b.wateredAt).getTime() - new Date(a.wateredAt).getTime())
+        .slice(0, 20);
+      setLogs(logList);
+    } catch (err) {
+      console.error('fetchData error:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) fetchData();
-      else setLoading(false);
+      if (user) {
+        setUid(user.uid);
+        fetchData(user.uid);
+      } else {
+        setLoading(false);
+      }
     });
     return unsubscribe;
   }, [params.id]);
@@ -82,12 +96,21 @@ export default function PlantDetailPage() {
 
   async function handleDelete() {
     if (!confirm(`「${plant?.name}」を削除しますか？水やり記録もすべて削除されます。`)) return;
-    const logsSnap = await getDocs(
-      query(collection(db, 'watering_logs'), where('plantId', '==', params.id))
-    );
-    await Promise.all(logsSnap.docs.map(d => deleteDoc(d.ref)));
-    await deleteDoc(doc(db, 'plants', params.id));
-    router.push('/');
+    if (!uid) return;
+    try {
+      const logsSnap = await getDocs(
+        query(
+          collection(db, 'watering_logs'),
+          where('plantId', '==', params.id),
+          where('userId', '==', uid),
+        )
+      );
+      await Promise.all(logsSnap.docs.map(d => deleteDoc(d.ref)));
+      await deleteDoc(doc(db, 'plants', params.id));
+      router.push('/');
+    } catch (err) {
+      console.error('handleDelete error:', err);
+    }
   }
 
   if (loading) {
@@ -109,7 +132,6 @@ export default function PlantDetailPage() {
   }
 
   const plantType = getPlantType(plant.type_id);
-  // lastWateredAt（デノーマライズ）を優先、なければログの先頭
   const lastWatered = toDate(plant.lastWateredAt) ?? (logs.length > 0 ? new Date(logs[0].wateredAt) : null);
   const schedule = calculateWateringSchedule(lastWatered, plantType, plant.size, weather);
 
@@ -146,7 +168,11 @@ export default function PlantDetailPage() {
       </div>
 
       <div className="mb-6">
-        <WateringButton plantId={plant.id} onWatered={fetchData} large />
+        <WateringButton
+          plantId={plant.id}
+          onWatered={() => uid && fetchData(uid)}
+          large
+        />
       </div>
 
       {logs.length > 0 && (
