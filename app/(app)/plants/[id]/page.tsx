@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   doc, getDoc, collection, query, where, getDocs, deleteDoc,
 } from 'firebase/firestore';
@@ -113,8 +114,12 @@ export default function PlantDetailPage() {
 
       <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="w-20 h-20 rounded-xl bg-green-100 flex items-center justify-center text-5xl flex-shrink-0">
-            {plantType.emoji}
+          <div className="w-20 h-20 rounded-xl bg-green-100 flex items-center justify-center text-5xl flex-shrink-0 overflow-hidden relative">
+            {plant.image_url ? (
+              <Image src={plant.image_url} alt={plant.name} fill className="object-cover" unoptimized />
+            ) : (
+              plantType.emoji
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-800">{plant.name}</h1>

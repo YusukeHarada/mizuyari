@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import { PLANT_TYPES } from '@/lib/plant-types';
@@ -16,12 +17,34 @@ const SIZES: { value: PlantSize; label: string; desc: string; emoji: string }[] 
 
 export default function NewPlantPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [typeId, setTypeId] = useState('foliage');
   const [size, setSize] = useState<PlantSize>('medium');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError('画像は10MB以下にしてください');
+      return;
+    }
+    setError('');
+    setImageFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleRemoveImage() {
+    setImageFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,17 +56,36 @@ export default function NewPlantPage() {
     setSaving(true);
     setError('');
 
-    await addDoc(collection(db, 'plants'), {
-      userId: uid,
-      name: name.trim(),
-      type_id: typeId,
-      size,
-      image_url: null,
-      createdAt: Timestamp.now(),
-    });
+    try {
+      let imageUrl: string | null = null;
 
-    router.push('/');
-    router.refresh();
+      if (imageFile) {
+        const form = new FormData();
+        form.append('file', imageFile);
+        const res = await fetch('/api/upload-image', { method: 'POST', body: form });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? '画像のアップロードに失敗しました');
+        }
+        const data = await res.json();
+        imageUrl = data.url;
+      }
+
+      await addDoc(collection(db, 'plants'), {
+        userId: uid,
+        name: name.trim(),
+        type_id: typeId,
+        size,
+        image_url: imageUrl,
+        createdAt: Timestamp.now(),
+      });
+
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '登録に失敗しました');
+      setSaving(false);
+    }
   }
 
   return (
@@ -54,6 +96,45 @@ export default function NewPlantPage() {
       <h1 className="text-xl font-bold text-gray-800 mb-6">植物を追加</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* 写真 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">写真（任意）</label>
+          {previewUrl ? (
+            <div className="relative w-28 h-28">
+              <Image
+                src={previewUrl}
+                alt="プレビュー"
+                fill
+                className="rounded-xl object-cover"
+                unoptimized
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-28 h-28 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 active:bg-gray-50 transition-colors"
+            >
+              <span className="text-3xl">📷</span>
+              <span className="text-xs mt-1">タップして選択</span>
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,image/heic,image/heif"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">名前</label>
           <input
@@ -99,7 +180,7 @@ export default function NewPlantPage() {
 
         <button type="submit" disabled={saving}
           className="w-full bg-green-500 text-white py-4 rounded-xl font-bold text-lg disabled:opacity-60 active:scale-95 transition-transform shadow-md">
-          {saving ? '登録中...' : '植物を登録する 🌱'}
+          {saving ? (imageFile ? 'アップロード中...' : '登録中...') : '植物を登録する 🌱'}
         </button>
       </form>
     </div>

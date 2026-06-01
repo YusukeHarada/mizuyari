@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Plant, WateringSchedule } from '@/types';
 import { formatNextWatering } from '@/lib/watering-calculator';
 import { getPlantType } from '@/lib/plant-types';
@@ -27,8 +28,12 @@ export default function PlantCard({ plant, schedule, onWatered }: Props) {
   return (
     <div className={`rounded-2xl border-2 ${style.border} p-4 flex items-center gap-3`}>
       <Link href={`/plants/${plant.id}`} className="flex-shrink-0">
-        <div className="w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center text-3xl">
-          {plantType.emoji}
+        <div className="w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center text-3xl overflow-hidden relative">
+          {plant.image_url ? (
+            <Image src={plant.image_url} alt={plant.name} fill className="object-cover" unoptimized />
+          ) : (
+            plantType.emoji
+          )}
         </div>
       </Link>
 
