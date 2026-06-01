@@ -7,7 +7,8 @@ import Image from 'next/image';
 import {
   doc, getDoc, collection, query, where, getDocs, deleteDoc,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase/client';
 import { Plant, WateringLog, WeatherData } from '@/types';
 import { calculateWateringSchedule } from '@/lib/watering-calculator';
 import { getPlantType } from '@/lib/plant-types';
@@ -57,7 +58,13 @@ export default function PlantDetailPage() {
     setLoading(false);
   }
 
-  useEffect(() => { fetchData(); }, [params.id]);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) fetchData();
+      else setLoading(false);
+    });
+    return unsubscribe;
+  }, [params.id]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
