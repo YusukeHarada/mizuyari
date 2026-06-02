@@ -2,21 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithRedirect, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (!result) { setLoading(false); return; }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-        const idToken = await result.user.getIdToken();
+      try {
+        const idToken = await user.getIdToken();
         const res = await fetch('/api/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -25,18 +27,26 @@ export default function LoginPage() {
         if (!res.ok) throw new Error('セッション作成失敗');
         router.push('/');
         router.refresh();
-      })
-      .catch((err) => {
-        console.error('Google sign-in error:', err);
-        setError('Googleログインに失敗しました');
+      } catch {
+        setError('ログインに失敗しました');
         setLoading(false);
-      });
+      }
+    });
+    return () => unsubscribe();
   }, [router]);
 
   async function handleGoogleSignIn() {
     setError('');
     setLoading(true);
     await signInWithRedirect(auth, new GoogleAuthProvider());
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-green-50 flex items-center justify-center">
+        <div className="text-green-600 text-sm">読み込み中...</div>
+      </div>
+    );
   }
 
   return (
@@ -54,8 +64,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 border border-gray-200 py-3 rounded-xl font-semibold text-gray-700 disabled:opacity-60 active:scale-95 transition-transform"
+            className="w-full flex items-center justify-center gap-3 border border-gray-200 py-3 rounded-xl font-semibold text-gray-700 active:scale-95 transition-transform"
           >
             <svg width="20" height="20" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
@@ -63,7 +72,7 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M10.6 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.5 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/>
               <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.2 0-11.5-4.2-13.4-9.9l-8.1 6C6.7 42.6 14.7 48 24 48z"/>
             </svg>
-            {loading ? 'ログイン中...' : 'Googleでログイン'}
+            Googleでログイン
           </button>
         </div>
       </div>
