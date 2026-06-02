@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain:        typeof window !== 'undefined'
+  authDomain:        typeof window !== 'undefined' && window.location.hostname !== 'localhost'
     ? window.location.hostname
     : process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
   projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
