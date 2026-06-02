@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 
 export default function LoginPage() {
@@ -10,28 +10,33 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    setLoading(true);
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!result) { setLoading(false); return; }
+
+        const idToken = await result.user.getIdToken();
+        const res = await fetch('/api/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        if (!res.ok) throw new Error('セッション作成失敗');
+        router.push('/');
+        router.refresh();
+      })
+      .catch((err) => {
+        console.error('Google sign-in error:', err);
+        setError('Googleログインに失敗しました');
+        setLoading(false);
+      });
+  }, [router]);
+
   async function handleGoogleSignIn() {
     setError('');
     setLoading(true);
-
-    try {
-      const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
-      const idToken = await user.getIdToken();
-
-      const res = await fetch('/api/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!res.ok) throw new Error('セッション作成失敗');
-
-      router.push('/');
-      router.refresh();
-    } catch {
-      setError('Googleログインに失敗しました');
-      setLoading(false);
-    }
+    await signInWithRedirect(auth, new GoogleAuthProvider());
   }
 
   return (
