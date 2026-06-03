@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
+import { getHousehold } from '@/lib/household';
 import { PLANT_TYPES } from '@/lib/plant-types';
 import { PlantSize } from '@/types';
 
@@ -19,6 +21,7 @@ export default function NewPlantPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [householdId, setHouseholdId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [typeId, setTypeId] = useState('foliage');
   const [size, setSize] = useState<PlantSize>('medium');
@@ -26,6 +29,14 @@ export default function NewPlantPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) return;
+      const hh = await getHousehold(u.uid);
+      setHouseholdId(hh?.id ?? null);
+    });
+  }, []);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -73,6 +84,7 @@ export default function NewPlantPage() {
 
       await addDoc(collection(db, 'plants'), {
         userId: uid,
+        householdId: householdId ?? undefined,
         name: name.trim(),
         type_id: typeId,
         size,

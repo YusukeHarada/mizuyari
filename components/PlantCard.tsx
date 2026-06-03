@@ -58,7 +58,7 @@ export default function PlantCard({ plant, schedule, onWatered }: Props) {
         </p>
       </Link>
 
-      <WateringButton plantId={plant.id} onWatered={onWatered} />
+      <WateringButton plantId={plant.id} householdId={plant.householdId} onWatered={onWatered} />
     </div>
   );
 }

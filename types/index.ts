@@ -9,9 +9,18 @@ export interface PlantType {
 }
 
 // Firestoreドキュメントに合わせて camelCase
+export interface Household {
+  id: string;
+  ownerUid: string;
+  memberUids: string[];
+  inviteCode: string;
+  createdAt: string;
+}
+
 export interface Plant {
   id: string;
   userId: string;
+  householdId?: string;
   name: string;
   type_id: string;       // plant_types の ID（既存データとの互換性維持）
   size: PlantSize;

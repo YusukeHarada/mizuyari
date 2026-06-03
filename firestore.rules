@@ -1,13 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /plants/{plantId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+    // householdId が設定されている場合、そのメンバーかどうかを確認
+    function isMember(householdId) {
+      return request.auth != null
+        && householdId != null
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.memberUids;
     }
+
+    // households はサーバーサイドAPI（Admin SDK）経由でのみ書き込み
+    match /households/{householdId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.memberUids;
+      allow write: if false;
+    }
+
+    match /plants/{plantId} {
+      // householdId 付き（新形式）: グループメンバーが操作可能
+      // householdId なし（旧形式）: 自分のデータのみ操作可能
+      allow read, update, delete: if isMember(resource.data.householdId)
+        || (request.auth != null && request.auth.uid == resource.data.userId);
+      allow create: if isMember(request.resource.data.householdId)
+        || (request.auth != null && request.auth.uid == request.resource.data.userId);
+    }
+
     match /watering_logs/{logId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow read, update, delete: if isMember(resource.data.householdId)
+        || (request.auth != null && request.auth.uid == resource.data.userId);
+      allow create: if isMember(request.resource.data.householdId)
+        || (request.auth != null && request.auth.uid == request.resource.data.userId);
     }
   }
 }

@@ -6,11 +6,12 @@ import { auth, db } from '@/lib/firebase/client';
 
 interface Props {
   plantId: string;
+  householdId?: string;
   onWatered: (plantId: string) => void;
   large?: boolean;
 }
 
-export default function WateringButton({ plantId, onWatered, large = false }: Props) {
+export default function WateringButton({ plantId, householdId, onWatered, large = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -27,7 +28,12 @@ export default function WateringButton({ plantId, onWatered, large = false }: Pr
       const now = Timestamp.now();
       // 水やりログを追加 + plant の lastWateredAt を同時更新（インデックス不要にするデノーマライズ）
       await Promise.all([
-        addDoc(collection(db, 'watering_logs'), { plantId, userId: uid, wateredAt: now }),
+        addDoc(collection(db, 'watering_logs'), {
+          plantId,
+          userId: uid,
+          householdId: householdId ?? null,
+          wateredAt: now,
+        }),
         updateDoc(doc(db, 'plants', plantId), { lastWateredAt: now }),
       ]);
       setDone(true);
