@@ -4,15 +4,25 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
+import { getHousehold } from '@/lib/household';
+import { Household } from '@/types';
 
 export default function SettingsPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [household, setHousehold] = useState<Household | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, user => {
+    return onAuthStateChanged(auth, async (user) => {
       if (user?.email) setEmail(user.email);
+      if (user) {
+        const hh = await getHousehold(user.uid);
+        setHousehold(hh);
+      } else {
+        setHousehold(null);
+      }
     });
   }, []);
 
@@ -24,6 +34,14 @@ export default function SettingsPage() {
     router.refresh();
   }
 
+  function handleCopyCode() {
+    if (!household?.inviteCode) return;
+    navigator.clipboard.writeText(household.inviteCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   return (
     <div className="max-w-md mx-auto px-4 pt-6">
       <h1 className="text-xl font-bold text-gray-800 mb-6">設定</h1>
@@ -33,6 +51,33 @@ export default function SettingsPage() {
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">アカウント</p>
           <p className="text-gray-700 font-medium">{email || '読み込み中...'}</p>
         </div>
+
+        {household !== undefined && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">家族グループ</p>
+            {household ? (
+              <>
+                <p className="text-sm text-gray-600 mb-3">招待コードを共有して家族を追加できます</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold tracking-[0.2em] text-green-600 flex-1">
+                    {household.inviteCode}
+                  </span>
+                  <button
+                    onClick={handleCopyCode}
+                    className="text-sm text-green-600 font-medium border border-green-200 rounded-lg px-3 py-1.5 active:bg-green-50 transition-colors"
+                  >
+                    {copied ? 'コピー済' : 'コピー'}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  メンバー: {household.memberUids.length}人
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">グループ未設定</p>
+            )}
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">天気・位置情報</p>

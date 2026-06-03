@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
+import { getHousehold } from '@/lib/household';
 import { Plant, WeatherData, WateringSchedule } from '@/types';
 import { calculateWateringSchedule } from '@/lib/watering-calculator';
 import { getPlantType } from '@/lib/plant-types';
 import PlantCard from '@/components/PlantCard';
+import HouseholdSetup from '@/components/HouseholdSetup';
 
 interface PlantWithSchedule { plant: Plant; schedule: WateringSchedule; }
 const URGENCY_ORDER = { overdue: 0, today: 1, soon: 2, ok: 3 };
@@ -21,18 +23,23 @@ function toDate(val: unknown): Date | null {
 
 export default function HomePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [householdId, setHouseholdId] = useState<string | null | undefined>(undefined);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, u => setUid(u?.uid ?? null));
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) { setUid(null); setHouseholdId(null); setLoading(false); return; }
+      setUid(u.uid);
+      const hh = await getHousehold(u.uid);
+      setHouseholdId(hh?.id ?? null);
+    });
   }, []);
 
-  const fetchPlants = useCallback(async (userId: string) => {
-    // orderBy なし → クライアントソートでインデックス不要
+  const fetchPlants = useCallback(async (hid: string) => {
     const snap = await getDocs(
-      query(collection(db, 'plants'), where('userId', '==', userId))
+      query(collection(db, 'plants'), where('householdId', '==', hid))
     );
     const list = snap.docs
       .map(d => ({ id: d.id, ...d.data() }) as Plant)
@@ -46,8 +53,9 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (uid) fetchPlants(uid);
-  }, [uid, fetchPlants]);
+    if (householdId) fetchPlants(householdId);
+    else if (householdId === null) setLoading(false);
+  }, [householdId, fetchPlants]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -67,6 +75,22 @@ export default function HomePage() {
     setPlants(prev => prev.map(p =>
       p.id === plantId ? { ...p, lastWateredAt: new Date().toISOString() } : p
     ));
+  }
+
+  // グループ未設定
+  if (householdId === null) {
+    return <HouseholdSetup onDone={(hid) => setHouseholdId(hid)} />;
+  }
+
+  // グループ取得中 or 植物取得中
+  if (householdId === undefined || loading) {
+    return (
+      <div className="max-w-md mx-auto px-4 pt-6">
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => <div key={i} className="h-24 bg-white rounded-2xl animate-pulse" />)}
+        </div>
+      </div>
+    );
   }
 
   const plantsWithSchedule: PlantWithSchedule[] = plants.map(plant => ({
@@ -102,11 +126,7 @@ export default function HomePage() {
         )}
       </div>
 
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => <div key={i} className="h-24 bg-white rounded-2xl animate-pulse" />)}
-        </div>
-      ) : plants.length === 0 ? (
+      {plants.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🌱</div>
           <p className="text-gray-500 mb-2">まだ植物が登録されていません</p>

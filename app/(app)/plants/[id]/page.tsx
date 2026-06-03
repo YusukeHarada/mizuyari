@@ -37,18 +37,15 @@ export default function PlantDetailPage() {
   async function fetchData(userId: string) {
     try {
       const plantSnap = await getDoc(doc(db, 'plants', params.id));
-      if (plantSnap.exists()) {
-        setPlant({ id: plantSnap.id, ...plantSnap.data() } as Plant);
-      }
+      if (!plantSnap.exists()) return;
+      const plantData = { id: plantSnap.id, ...plantSnap.data() } as Plant;
+      setPlant(plantData);
 
-      // userId を条件に追加してルールに適合させる（orderBy なし → クライアントソート）
-      const logsSnap = await getDocs(
-        query(
-          collection(db, 'watering_logs'),
-          where('plantId', '==', params.id),
-          where('userId', '==', userId),
-        )
-      );
+      // householdId があればグループ全員のログを取得、なければ自分のログのみ
+      const logsQuery = plantData.householdId
+        ? query(collection(db, 'watering_logs'), where('plantId', '==', params.id), where('householdId', '==', plantData.householdId))
+        : query(collection(db, 'watering_logs'), where('plantId', '==', params.id), where('userId', '==', userId));
+      const logsSnap = await getDocs(logsQuery);
       const logList = logsSnap.docs
         .map(d => {
           const data = d.data();
@@ -100,13 +97,10 @@ export default function PlantDetailPage() {
     if (!confirm(`「${plant?.name}」を削除しますか？水やり記録もすべて削除されます。`)) return;
     if (!uid) return;
     try {
-      const logsSnap = await getDocs(
-        query(
-          collection(db, 'watering_logs'),
-          where('plantId', '==', params.id),
-          where('userId', '==', uid),
-        )
-      );
+      const logsQuery = plant?.householdId
+        ? query(collection(db, 'watering_logs'), where('plantId', '==', params.id), where('householdId', '==', plant.householdId))
+        : query(collection(db, 'watering_logs'), where('plantId', '==', params.id), where('userId', '==', uid));
+      const logsSnap = await getDocs(logsQuery);
       await Promise.all(logsSnap.docs.map(d => deleteDoc(d.ref)));
       await deleteDoc(doc(db, 'plants', params.id));
       router.push('/');
@@ -219,6 +213,7 @@ export default function PlantDetailPage() {
       <div className="mb-6">
         <WateringButton
           plantId={plant.id}
+          householdId={plant.householdId}
           onWatered={() => uid && fetchData(uid)}
           large
         />
