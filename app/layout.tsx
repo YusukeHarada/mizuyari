@@ -8,6 +8,9 @@ const geist = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'みずやり',
   description: '植物の水やりタイミングを天気・気温・季節に合わせて管理するアプリ',
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
