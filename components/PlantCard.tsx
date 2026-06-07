@@ -6,6 +6,7 @@ import { Plant, WateringSchedule } from '@/types';
 import { formatNextWatering } from '@/lib/watering-calculator';
 import { getPlantType } from '@/lib/plant-types';
 import WateringButton from './WateringButton';
+import { useShowPlantImages } from '@/lib/use-show-plant-images';
 
 const URGENCY_STYLES = {
   overdue: { border: 'border-red-400 bg-red-50',      badge: 'bg-red-100 text-red-700',      label: '遅れ' },
@@ -24,12 +25,13 @@ export default function PlantCard({ plant, schedule, onWatered }: Props) {
   const plantType = getPlantType(plant.type_id);
   const style = URGENCY_STYLES[schedule.urgency];
   const nextLabel = formatNextWatering(schedule);
+  const [showImages] = useShowPlantImages();
 
   return (
     <div className={`rounded-2xl border-2 ${style.border} p-4 flex items-center gap-3`}>
       <Link href={`/plants/${plant.id}`} className="flex-shrink-0">
         <div className="w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center text-3xl overflow-hidden relative">
-          {plant.image_url ? (
+          {showImages && plant.image_url ? (
             <Image src={plant.image_url} alt={plant.name} fill className="object-cover" unoptimized />
           ) : (
             plantType.emoji

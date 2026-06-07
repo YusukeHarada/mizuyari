@@ -6,6 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { getHousehold } from '@/lib/household';
 import { Household } from '@/types';
+import { useShowPlantImages } from '@/lib/use-show-plant-images';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function SettingsPage() {
   const [household, setHousehold] = useState<Household | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showImages, setShowImages] = useShowPlantImages();
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -78,6 +80,26 @@ export default function SettingsPage() {
             )}
           </div>
         )}
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">表示設定</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">植物の画像アイコンを表示</p>
+              <p className="text-xs text-gray-400 mt-0.5">オフにすると読み込みが速くなります</p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={showImages}
+              onClick={() => setShowImages(!showImages)}
+              className={`relative w-12 h-6 rounded-full transition-colors ${showImages ? 'bg-green-500' : 'bg-gray-300'}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${showImages ? 'translate-x-6' : ''}`}
+              />
+            </button>
+          </div>
+        </div>
 
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">天気・位置情報</p>
