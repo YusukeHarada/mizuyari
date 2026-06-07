@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
-import { Plant, WateringLog, WeatherData } from '@/types';
+import { Plant, WateringLog, WeatherData, PlantLocation } from '@/types';
 import { calculateWateringSchedule } from '@/lib/watering-calculator';
 import { getPlantType } from '@/lib/plant-types';
 import WateringButton from '@/components/WateringButton';
@@ -154,7 +154,8 @@ export default function PlantDetailPage() {
 
   const plantType = getPlantType(plant.type_id);
   const lastWatered = toDate(plant.lastWateredAt) ?? (logs.length > 0 ? new Date(logs[0].wateredAt) : null);
-  const schedule = calculateWateringSchedule(lastWatered, plantType, plant.size, weather);
+  const location: PlantLocation = plant.location ?? 'indoor';
+  const schedule = calculateWateringSchedule(lastWatered, plantType, plant.size, weather, new Date(), location);
 
   return (
     <div className="max-w-md mx-auto px-4 pt-6 pb-4">
@@ -197,6 +198,19 @@ export default function PlantDetailPage() {
             <h1 className="text-xl font-bold text-gray-800">{plant.name}</h1>
             <p className="text-gray-500 text-sm">{plantType.name_ja}</p>
             <p className="text-gray-400 text-sm">サイズ: {SIZE_LABELS[plant.size]}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-gray-400 text-sm">{location === 'indoor' ? '🏠 屋内' : '☀️ 屋外'}</span>
+              <button
+                onClick={async () => {
+                  const next: PlantLocation = location === 'indoor' ? 'outdoor' : 'indoor';
+                  await updateDoc(doc(db, 'plants', params.id), { location: next });
+                  setPlant(prev => prev ? { ...prev, location: next } : prev);
+                }}
+                className="text-xs text-green-600 border border-green-200 rounded px-1.5 py-0.5"
+              >
+                切り替え
+              </button>
+            </div>
             {lastWatered && (
               <p className="text-gray-400 text-sm">
                 最終水やり: {lastWatered.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}

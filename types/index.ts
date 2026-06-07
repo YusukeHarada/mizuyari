@@ -1,4 +1,5 @@
 export type PlantSize = 'small' | 'medium' | 'large';
+export type PlantLocation = 'indoor' | 'outdoor';
 export type Urgency = 'overdue' | 'today' | 'soon' | 'ok';
 
 export interface PlantType {
@@ -24,6 +25,7 @@ export interface Plant {
   name: string;
   type_id: string;       // plant_types の ID（既存データとの互換性維持）
   size: PlantSize;
+  location?: PlantLocation; // 未設定の場合は indoor として扱う
   image_url?: string | null;
   createdAt: string;
   lastWateredAt?: string | null; // 水やり記録時に更新するデノーマライズフィールド
