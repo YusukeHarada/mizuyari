@@ -9,7 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
 import { getHousehold } from '@/lib/household';
 import { PLANT_TYPES } from '@/lib/plant-types';
-import { PlantSize } from '@/types';
+import { PlantSize, PlantLocation } from '@/types';
 
 const SIZES: { value: PlantSize; label: string; desc: string; emoji: string }[] = [
   { value: 'small',  label: '小', desc: '鉢小さめ・卓上サイズ', emoji: '🌱' },
@@ -25,6 +25,7 @@ export default function NewPlantPage() {
   const [name, setName] = useState('');
   const [typeId, setTypeId] = useState('foliage');
   const [size, setSize] = useState<PlantSize>('medium');
+  const [location, setLocation] = useState<PlantLocation>('indoor');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -88,6 +89,7 @@ export default function NewPlantPage() {
         name: name.trim(),
         type_id: typeId,
         size,
+        location,
         image_url: imageUrl,
         createdAt: Timestamp.now(),
       });
@@ -186,6 +188,30 @@ export default function NewPlantPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">置き場所</label>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { value: 'indoor' as PlantLocation, label: '屋内', desc: '室内・ベランダ内側', emoji: '🏠' },
+              { value: 'outdoor' as PlantLocation, label: '屋外', desc: '庭・ベランダ外側', emoji: '☀️' },
+            ]).map(opt => (
+              <button key={opt.value} type="button" onClick={() => setLocation(opt.value)}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                  location === opt.value ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'
+                }`}>
+                <div className="text-2xl mb-1">{opt.emoji}</div>
+                <div className="text-sm font-bold text-gray-700">{opt.label}</div>
+                <div className="text-xs text-gray-400 leading-tight mt-0.5">{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+          {location === 'outdoor' && (
+            <p className="text-xs text-gray-400 mt-2">
+              屋外では雨や気温による水やり調整が強めに働きます
+            </p>
+          )}
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}

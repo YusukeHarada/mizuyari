@@ -99,7 +99,9 @@ export default function HomePage() {
       toDate(plant.lastWateredAt),
       getPlantType(plant.type_id),
       plant.size,
-      weather
+      weather,
+      new Date(),
+      plant.location ?? 'indoor',
     ),
   })).sort((a, b) => URGENCY_ORDER[a.schedule.urgency] - URGENCY_ORDER[b.schedule.urgency]);
 
