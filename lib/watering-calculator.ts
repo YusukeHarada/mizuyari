@@ -1,4 +1,4 @@
-import { PlantType, PlantLocation, PlantSize, WeatherData, WateringSchedule } from '@/types';
+import { PlantType, PlantLocation, PlantSize, WateringSchedule } from '@/types';
 
 function getSizeFactor(size: PlantSize): number {
   return { small: 0.8, medium: 1.0, large: 1.3 }[size];
@@ -10,42 +10,16 @@ function getSeasonFactor(month: number): number {
   return 1.0;
 }
 
-function getTemperatureFactor(temp: number): number {
-  if (temp >= 35) return 0.7;
-  if (temp >= 28) return 0.85;
-  if (temp >= 18) return 1.0;
-  if (temp >= 8)  return 1.2;
-  return 1.5;
-}
-
-function getRainBonus(precipitation3day: number): number {
-  if (precipitation3day >= 20) return 3;
-  if (precipitation3day >= 10) return 1;
-  return 0;
-}
-
-// 屋内植物は気温・季節の影響を半減、雨の影響なし
-function applyLocationModifiers(
-  seasonFactor: number,
-  temperatureFactor: number,
-  rainBonus: number,
-  location: PlantLocation,
-): { seasonFactor: number; temperatureFactor: number; rainBonus: number } {
-  if (location === 'outdoor') {
-    return { seasonFactor, temperatureFactor, rainBonus };
-  }
-  return {
-    seasonFactor: (seasonFactor + 1.0) / 2,
-    temperatureFactor: (temperatureFactor + 1.0) / 2,
-    rainBonus: 0,
-  };
+// 屋内植物は季節の影響を半減
+function applyIndoorModifier(rawSeasonFactor: number, location: PlantLocation): number {
+  if (location === 'outdoor') return rawSeasonFactor;
+  return (rawSeasonFactor + 1.0) / 2;
 }
 
 export function calculateWateringSchedule(
   lastWatered: Date | null,
   plantType: PlantType,
   size: PlantSize,
-  weather?: WeatherData | null,
   _now: Date = new Date(),
   location: PlantLocation = 'indoor',
 ): WateringSchedule {
@@ -55,14 +29,9 @@ export function calculateWateringSchedule(
 
   const sizeFactor = getSizeFactor(size);
   const rawSeasonFactor = getSeasonFactor(month);
-  const rawTemperatureFactor = weather ? getTemperatureFactor(weather.temperature) : 1.0;
-  const rawRainBonus = weather ? getRainBonus(weather.precipitation_3day) : 0;
+  const seasonFactor = applyIndoorModifier(rawSeasonFactor, location);
 
-  const { seasonFactor, temperatureFactor, rainBonus: rainBonusDays } = applyLocationModifiers(
-    rawSeasonFactor, rawTemperatureFactor, rawRainBonus, location,
-  );
-
-  const rawInterval = base * sizeFactor * seasonFactor * temperatureFactor + rainBonusDays;
+  const rawInterval = base * sizeFactor * seasonFactor;
   const adjustedInterval = Math.max(1, Math.round(rawInterval));
 
   const startDate = lastWatered ?? now;
@@ -78,11 +47,7 @@ export function calculateWateringSchedule(
   const multiplyParts: string[] = [`基本${base}日`];
   if (sizeFactor !== 1.0) multiplyParts.push(`サイズ×${sizeFactor}`);
   if (seasonFactor !== 1.0) multiplyParts.push(`季節×${seasonFactor.toFixed(2)}`);
-  if (weather && temperatureFactor !== 1.0) {
-    multiplyParts.push(`気温${Math.round(weather.temperature)}°C×${temperatureFactor.toFixed(2)}`);
-  }
   let explanation = multiplyParts.join(' × ');
-  if (rainBonusDays > 0) explanation += ` +降雨${rainBonusDays}日`;
   explanation += ` → ${adjustedInterval}日`;
   if (location === 'indoor') explanation += '（屋内）';
 
@@ -90,7 +55,7 @@ export function calculateWateringSchedule(
     next_watering_date: nextDate,
     adjusted_interval_days: adjustedInterval,
     base_interval_days: base,
-    factors: { size_factor: sizeFactor, season_factor: seasonFactor, temperature_factor: temperatureFactor, rain_bonus_days: rainBonusDays },
+    factors: { size_factor: sizeFactor, season_factor: seasonFactor },
     explanation,
     urgency,
   };

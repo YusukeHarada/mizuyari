@@ -9,7 +9,6 @@
 - **フレームワーク**: Next.js 16 (App Router), React 19, TypeScript 5
 - **スタイル**: Tailwind CSS 4
 - **バックエンド**: Firebase (Auth, Firestore, Storage)
-- **天気API**: Open-Meteo（無認証、緯度経度で取得）
 - **画像処理**: Sharp（WebP変換、400×400px center-crop）
 - **テスト**: Vitest（ユニット）, Playwright（E2E）
 
@@ -18,7 +17,7 @@
 ```
 app/          # Next.js App Router（ページ・APIルート）
   (app)/      # 認証済みユーザー向けページ
-  api/        # APIルート（session, weather, upload-image, households）
+  api/        # APIルート（session, upload-image, households）
 components/   # 共通コンポーネント
 lib/          # ロジック・ユーティリティ
   firebase/   # Firebase client/admin 初期化
@@ -38,9 +37,9 @@ __tests__/    # ユニットテスト
 ## 水やり計算の設計方針
 
 - **基本方針**: 根腐れ防止のため間隔は長めに設定
-- **屋内植物（デフォルト）**: 雨の影響なし、気温・季節係数を半減
-- **屋外植物**: 雨・気温・季節係数をフルに適用
-- 計算式: `基本間隔 × サイズ係数 × 季節係数 × 気温係数 + 雨ボーナス日数`
+- **屋内植物（デフォルト）**: 季節係数を `(raw + 1.0) / 2` に半減して適用
+- **屋外植物**: 季節係数をフルに適用
+- 計算式: `基本間隔 × サイズ係数 × 季節係数`
 - 新しい植物種別を追加する場合は `lib/plant-types.ts` を編集する
 
 ## 植物種別と基本間隔
