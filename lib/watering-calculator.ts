@@ -16,6 +16,10 @@ function applyIndoorModifier(rawSeasonFactor: number, location: PlantLocation): 
   return (rawSeasonFactor + 1.0) / 2;
 }
 
+function toMidnight(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 export function calculateWateringSchedule(
   lastWatered: Date | null,
   plantType: PlantType,
@@ -23,9 +27,9 @@ export function calculateWateringSchedule(
   _now: Date = new Date(),
   location: PlantLocation = 'indoor',
 ): WateringSchedule {
-  const now = _now;
+  const nowDay = toMidnight(_now);
   const base = plantType.base_interval_days;
-  const month = now.getMonth() + 1;
+  const month = _now.getMonth() + 1;
 
   const sizeFactor = getSizeFactor(size);
   const rawSeasonFactor = getSeasonFactor(month);
@@ -34,11 +38,11 @@ export function calculateWateringSchedule(
   const rawInterval = base * sizeFactor * seasonFactor;
   const adjustedInterval = Math.max(1, Math.round(rawInterval));
 
-  const startDate = lastWatered ?? now;
-  const nextDate = new Date(startDate);
+  const startDay = lastWatered ? toMidnight(lastWatered) : nowDay;
+  const nextDate = new Date(startDay);
   nextDate.setDate(nextDate.getDate() + adjustedInterval);
 
-  const diffDays = Math.floor((nextDate.getTime() - now.getTime()) / 86400000);
+  const diffDays = Math.floor((nextDate.getTime() - nowDay.getTime()) / 86400000);
   const urgency =
     diffDays < 0 ? 'overdue' :
     diffDays === 0 ? 'today' :
@@ -62,8 +66,9 @@ export function calculateWateringSchedule(
 }
 
 export function formatNextWatering(schedule: WateringSchedule, _now: Date = new Date()): string {
+  const nowDay = toMidnight(_now);
   const diffDays = Math.floor(
-    (schedule.next_watering_date.getTime() - _now.getTime()) / 86400000
+    (schedule.next_watering_date.getTime() - nowDay.getTime()) / 86400000
   );
   if (diffDays < 0) return `${Math.abs(diffDays)}日遅れ`;
   if (diffDays === 0) return '今日';
