@@ -6,7 +6,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
 import { getHousehold } from '@/lib/household';
-import { Plant, WeatherData, WateringSchedule } from '@/types';
+import { Plant, WateringSchedule } from '@/types';
 import { calculateWateringSchedule } from '@/lib/watering-calculator';
 import { getPlantType } from '@/lib/plant-types';
 import PlantCard from '@/components/PlantCard';
@@ -25,7 +25,6 @@ export default function HomePage() {
   const [uid, setUid] = useState<string | null>(null);
   const [householdId, setHouseholdId] = useState<string | null | undefined>(undefined);
   const [plants, setPlants] = useState<Plant[]>([]);
-  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,20 +56,6 @@ export default function HomePage() {
     else if (householdId === null) setLoading(false);
   }, [householdId, fetchPlants]);
 
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        try {
-          const res = await fetch(`/api/weather?lat=${coords.latitude}&lon=${coords.longitude}`);
-          if (res.ok) setWeather(await res.json());
-        } catch { /* サイレントに無視 */ }
-      },
-      () => {},
-      { timeout: 5000 }
-    );
-  }, []);
-
   function handleWatered(plantId: string) {
     setPlants(prev => prev.map(p =>
       p.id === plantId ? { ...p, lastWateredAt: new Date().toISOString() } : p
@@ -99,7 +84,6 @@ export default function HomePage() {
       toDate(plant.lastWateredAt),
       getPlantType(plant.type_id),
       plant.size,
-      weather,
       new Date(),
       plant.location ?? 'indoor',
     ),
@@ -120,12 +104,6 @@ export default function HomePage() {
             </p>
           )}
         </div>
-        {weather && (
-          <div className="bg-white rounded-xl px-3 py-2 shadow-sm text-center min-w-[70px]">
-            <p className="text-lg font-bold text-gray-800">{Math.round(weather.temperature)}°C</p>
-            <p className="text-xs text-gray-500">{weather.weather_description}</p>
-          </div>
-        )}
       </div>
 
       {plants.length === 0 ? (

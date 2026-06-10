@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
-import { Plant, WateringLog, WeatherData, PlantLocation } from '@/types';
+import { Plant, WateringLog, PlantLocation } from '@/types';
 import { calculateWateringSchedule } from '@/lib/watering-calculator';
 import { getPlantType } from '@/lib/plant-types';
 import WateringButton from '@/components/WateringButton';
@@ -30,7 +30,6 @@ export default function PlantDetailPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [plant, setPlant] = useState<Plant | null>(null);
   const [logs, setLogs] = useState<WateringLog[]>([]);
-  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageUploading, setImageUploading] = useState(false);
 
@@ -78,20 +77,6 @@ export default function PlantDetailPage() {
     });
     return unsubscribe;
   }, [params.id]);
-
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        try {
-          const res = await fetch(`/api/weather?lat=${coords.latitude}&lon=${coords.longitude}`);
-          if (res.ok) setWeather(await res.json());
-        } catch { /* 無視 */ }
-      },
-      () => {},
-      { timeout: 5000 }
-    );
-  }, []);
 
   async function handleDelete() {
     if (!confirm(`「${plant?.name}」を削除しますか？水やり記録もすべて削除されます。`)) return;
@@ -155,7 +140,7 @@ export default function PlantDetailPage() {
   const plantType = getPlantType(plant.type_id);
   const lastWatered = toDate(plant.lastWateredAt) ?? (logs.length > 0 ? new Date(logs[0].wateredAt) : null);
   const location: PlantLocation = plant.location ?? 'indoor';
-  const schedule = calculateWateringSchedule(lastWatered, plantType, plant.size, weather, new Date(), location);
+  const schedule = calculateWateringSchedule(lastWatered, plantType, plant.size, new Date(), location);
 
   return (
     <div className="max-w-md mx-auto px-4 pt-6 pb-4">

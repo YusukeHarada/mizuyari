@@ -38,18 +38,9 @@ export interface WateringLog {
   note?: string | null;
 }
 
-export interface WeatherData {
-  temperature: number;
-  precipitation_3day: number;
-  weather_code: number;
-  weather_description: string;
-}
-
 export interface WateringFactors {
   size_factor: number;
   season_factor: number;
-  temperature_factor: number;
-  rain_bonus_days: number;
 }
 
 export interface WateringSchedule {
