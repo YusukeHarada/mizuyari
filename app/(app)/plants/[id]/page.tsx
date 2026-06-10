@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  doc, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc,
+  doc, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc, addDoc, Timestamp,
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
@@ -32,6 +32,8 @@ export default function PlantDetailPage() {
   const [logs, setLogs] = useState<WateringLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [imageUploading, setImageUploading] = useState(false);
+  const [showDateInput, setShowDateInput] = useState(false);
+  const [pastDate, setPastDate] = useState('');
 
   async function fetchData(userId: string) {
     try {
@@ -77,6 +79,29 @@ export default function PlantDetailPage() {
     });
     return unsubscribe;
   }, [params.id]);
+
+  async function handleWateredPast(dateStr: string) {
+    if (!uid || !dateStr || !plant) return;
+    const date = new Date(dateStr);
+    const ts = Timestamp.fromDate(date);
+    const currentLastWatered = toDate(plant.lastWateredAt);
+
+    const ops: Promise<unknown>[] = [
+      addDoc(collection(db, 'watering_logs'), {
+        plantId: plant.id,
+        userId: uid,
+        householdId: plant.householdId ?? null,
+        wateredAt: ts,
+      }),
+    ];
+    if (!currentLastWatered || date >= currentLastWatered) {
+      ops.push(updateDoc(doc(db, 'plants', params.id), { lastWateredAt: ts }));
+    }
+    await Promise.all(ops);
+    setShowDateInput(false);
+    setPastDate('');
+    fetchData(uid);
+  }
 
   async function handleUndoWatering() {
     if (!logs[0] || !uid) return;
@@ -253,6 +278,44 @@ export default function PlantDetailPage() {
           onWatered={() => uid && fetchData(uid)}
           large
         />
+        <div className="mt-3">
+          {!showDateInput ? (
+            <button
+              onClick={() => {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                setPastDate(yesterday.toISOString().slice(0, 10));
+                setShowDateInput(true);
+              }}
+              className="w-full text-sm text-gray-400 py-1 hover:text-gray-600"
+            >
+              別の日付で記録する
+            </button>
+          ) : (
+            <div className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-2">
+              <input
+                type="date"
+                value={pastDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={e => setPastDate(e.target.value)}
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5"
+              />
+              <button
+                onClick={() => handleWateredPast(pastDate)}
+                disabled={!pastDate}
+                className="text-sm bg-blue-500 text-white px-3 py-1.5 rounded-lg disabled:opacity-40"
+              >
+                登録
+              </button>
+              <button
+                onClick={() => { setShowDateInput(false); setPastDate(''); }}
+                className="text-sm text-gray-400 px-2 py-1.5"
+              >
+                キャンセル
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <button onClick={handleDelete}
