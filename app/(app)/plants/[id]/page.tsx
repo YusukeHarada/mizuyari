@@ -78,6 +78,19 @@ export default function PlantDetailPage() {
     return unsubscribe;
   }, [params.id]);
 
+  async function handleUndoWatering() {
+    if (!logs[0] || !uid) return;
+    const latestLog = logs[0];
+    const previousLog = logs[1];
+    await Promise.all([
+      deleteDoc(doc(db, 'watering_logs', latestLog.id)),
+      updateDoc(doc(db, 'plants', params.id), {
+        lastWateredAt: previousLog ? new Date(previousLog.wateredAt) : null,
+      }),
+    ]);
+    fetchData(uid);
+  }
+
   async function handleDelete() {
     if (!confirm(`「${plant?.name}」を削除しますか？水やり記録もすべて削除されます。`)) return;
     if (!uid) return;
@@ -214,9 +227,20 @@ export default function PlantDetailPage() {
           <h2 className="text-sm font-semibold text-gray-500 mb-2">直近の水やり</h2>
           <div className="flex flex-wrap gap-2">
             {logs.map((log, i) => (
-              <span key={log.id} className={`text-xs px-3 py-1.5 rounded-full ${i === 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                💧 {new Date(log.wateredAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
-              </span>
+              i === 0 ? (
+                <span key={log.id} className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-full bg-blue-100 text-blue-700">
+                  <span>💧 {new Date(log.wateredAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}</span>
+                  <button
+                    onClick={handleUndoWatering}
+                    className="w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-600 leading-none"
+                    title="取り消す"
+                  >✕</button>
+                </span>
+              ) : (
+                <span key={log.id} className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
+                  💧 {new Date(log.wateredAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+                </span>
+              )
             ))}
           </div>
         </div>
