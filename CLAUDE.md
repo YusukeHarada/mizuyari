@@ -60,6 +60,13 @@ __tests__/    # ユニットテスト
 - セッションはサーバーサイドのCookieで管理（`/api/session`）
 - `app/(app)/layout.tsx` でセッション検証、未認証は `/login` にリダイレクト
 
+## 水やり履歴・取り消し機能の設計
+
+- 詳細ページの「直近の水やり」セクションに直近3件をチップ表示（`watering_logs` から取得、降順ソート後 `slice(0, 3)`）
+- 最新チップ（index=0）のみに ✕ ボタンを表示
+- 取り消し時: 最新ログを削除 + `plants.lastWateredAt` を前ログの日時（なければ null）に更新
+- スケジュールは `lastWateredAt` を起点に再計算されるため、取り消し後は押下前の予定日に戻る
+
 ## 開発時の注意事項
 
 - 環境変数は `.env.local` に `NEXT_PUBLIC_FIREBASE_*` と `FIREBASE_SERVICE_ACCOUNT_KEY` が必要
