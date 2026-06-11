@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { PLANT_TYPES, PLANT_TYPE_MAP, getPlantType } from '../lib/plant-types';
 
 describe('PLANT_TYPES 定義', () => {
-  it('6種類定義されている', () => {
-    expect(PLANT_TYPES).toHaveLength(6);
+  it('7種類定義されている', () => {
+    expect(PLANT_TYPES).toHaveLength(7);
   });
 
   it('各タイプに必須フィールドが揃っている', () => {
@@ -21,26 +21,29 @@ describe('PLANT_TYPES 定義', () => {
     expect(unique.size).toBe(ids.length);
   });
 
-  it('サボテンは14日', () => {
+  it('多肉植物は14日', () => {
     const t = PLANT_TYPES.find(t => t.id === 'succulent')!;
     expect(t.base_interval_days).toBe(14);
   });
 
-  it('庭木は10日', () => {
+  it('庭木は14日', () => {
     const t = PLANT_TYPES.find(t => t.id === 'tree')!;
+    expect(t.base_interval_days).toBe(14);
+  });
+
+  it('観葉植物は10日', () => {
+    const t = PLANT_TYPES.find(t => t.id === 'foliage')!;
     expect(t.base_interval_days).toBe(10);
   });
 
-  it('観葉植物は5日', () => {
-    const t = PLANT_TYPES.find(t => t.id === 'foliage')!;
-    expect(t.base_interval_days).toBe(5);
+  it('ハーブは4日', () => {
+    const t = PLANT_TYPES.find(t => t.id === 'herb')!;
+    expect(t.base_interval_days).toBe(4);
   });
 
-  it('ハーブ・野菜は2日', () => {
-    for (const id of ['herb', 'vegetable']) {
-      const t = PLANT_TYPES.find(t => t.id === id)!;
-      expect(t.base_interval_days).toBe(2);
-    }
+  it('野菜は3日', () => {
+    const t = PLANT_TYPES.find(t => t.id === 'vegetable')!;
+    expect(t.base_interval_days).toBe(3);
   });
 });
 
