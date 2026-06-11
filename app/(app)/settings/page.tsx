@@ -102,22 +102,12 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">天気・位置情報</p>
-          <p className="text-sm text-gray-600">
-            水やり間隔の計算に現在地の天気を使用しています。ブラウザの位置情報を許可することで、
-            気温や降水量に基づいた正確な水やりタイミングを提案します。
-          </p>
-          <p className="text-xs text-gray-400 mt-2">位置情報は天気APIにのみ使用され、サーバーには保存されません。</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">間隔の計算について</p>
           <div className="space-y-1 text-sm text-gray-600">
-            <p>・<span className="font-medium">夏（6〜9月）</span>: 間隔を短縮（×0.7）</p>
-            <p>・<span className="font-medium">冬（12〜2月）</span>: 間隔を延長（×1.4）</p>
-            <p>・<span className="font-medium">高温（35°C〜）</span>: 間隔を短縮（×0.6）</p>
-            <p>・<span className="font-medium">降雨20mm以上</span>: +2日追加</p>
+            <p>・<span className="font-medium">夏（6〜9月）</span>: 間隔を短縮（屋外×0.85 / 屋内×0.93）</p>
+            <p>・<span className="font-medium">冬（12〜2月）</span>: 間隔を延長（屋外×1.4 / 屋内×1.2）</p>
             <p>・<span className="font-medium">小さい鉢</span>: 間隔を短縮（×0.8）</p>
+            <p>・<span className="font-medium">大きい鉢</span>: 間隔を延長（×1.3）</p>
           </div>
         </div>
 
