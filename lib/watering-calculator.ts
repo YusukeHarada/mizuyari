@@ -5,8 +5,8 @@ function getSizeFactor(size: PlantSize): number {
 }
 
 function getSeasonFactor(month: number): number {
-  if (month >= 6 && month <= 9) return 0.85; // 夏: 蒸発増（屋外基準）
-  if (month === 12 || month <= 2) return 1.4; // 冬: 休眠期
+  if (month >= 6 && month <= 9) return 0.9; // 夏: 蒸発増（屋外基準。過湿回避のため短縮は控えめ）
+  if (month === 12 || month <= 2) return 1.6; // 冬: 休眠期（根腐れ防止で間隔を長めに）
   return 1.0;
 }
 
