@@ -21,9 +21,9 @@ describe('PLANT_TYPES 定義', () => {
     expect(unique.size).toBe(ids.length);
   });
 
-  it('多肉植物は14日', () => {
+  it('多肉植物は18日', () => {
     const t = PLANT_TYPES.find(t => t.id === 'succulent')!;
-    expect(t.base_interval_days).toBe(14);
+    expect(t.base_interval_days).toBe(18);
   });
 
   it('庭木は14日', () => {
@@ -31,14 +31,24 @@ describe('PLANT_TYPES 定義', () => {
     expect(t.base_interval_days).toBe(14);
   });
 
-  it('観葉植物は10日', () => {
+  it('観葉植物は14日', () => {
     const t = PLANT_TYPES.find(t => t.id === 'foliage')!;
-    expect(t.base_interval_days).toBe(10);
+    expect(t.base_interval_days).toBe(14);
   });
 
-  it('ハーブは4日', () => {
+  it('サボテンは28日', () => {
+    const t = PLANT_TYPES.find(t => t.id === 'cactus')!;
+    expect(t.base_interval_days).toBe(28);
+  });
+
+  it('花植物は8日', () => {
+    const t = PLANT_TYPES.find(t => t.id === 'flowering')!;
+    expect(t.base_interval_days).toBe(8);
+  });
+
+  it('ハーブは5日', () => {
     const t = PLANT_TYPES.find(t => t.id === 'herb')!;
-    expect(t.base_interval_days).toBe(4);
+    expect(t.base_interval_days).toBe(5);
   });
 
   it('野菜は3日', () => {

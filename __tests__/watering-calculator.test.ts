@@ -12,8 +12,8 @@ const SUMMER = new Date('2024-07-15T10:00:00'); // 夏 (7月)
 const WINTER = new Date('2024-01-15T10:00:00'); // 冬 (1月)
 
 // 屋内の季節係数（半減適用後）
-const INDOOR_SUMMER_SEASON = (0.85 + 1.0) / 2; // 0.925
-const INDOOR_WINTER_SEASON = (1.4 + 1.0) / 2;  // 1.2
+const INDOOR_SUMMER_SEASON = (0.9 + 1.0) / 2; // 0.95
+const INDOOR_WINTER_SEASON = (1.6 + 1.0) / 2; // 1.3
 
 // 基準日から n 日前の日付を返すヘルパー
 function daysAgo(n: number, base: Date): Date {
@@ -55,13 +55,13 @@ describe('季節補正', () => {
     expect(r.factors.season_factor).toBe(1.0);
   });
 
-  it('夏 (7月) → season_factor が屋内補正後 0.925', () => {
+  it('夏 (7月) → season_factor が屋内補正後 0.95', () => {
     const r = calculateWateringSchedule(null, FOLIAGE, 'medium', SUMMER);
     expect(r.factors.season_factor).toBeCloseTo(INDOOR_SUMMER_SEASON);
     expect(r.adjusted_interval_days).toBe(Math.max(1, Math.round(5 * INDOOR_SUMMER_SEASON)));
   });
 
-  it('冬 (1月) → season_factor が屋内補正後 1.2', () => {
+  it('冬 (1月) → season_factor が屋内補正後 1.3', () => {
     const r = calculateWateringSchedule(null, FOLIAGE, 'medium', WINTER);
     expect(r.factors.season_factor).toBeCloseTo(INDOOR_WINTER_SEASON);
     expect(r.adjusted_interval_days).toBe(Math.max(1, Math.round(5 * INDOOR_WINTER_SEASON)));
@@ -87,18 +87,18 @@ describe('季節補正', () => {
 
   it('屋外は rawSeasonFactor をそのまま使用', () => {
     const r = calculateWateringSchedule(null, FOLIAGE, 'medium', SUMMER, 'outdoor');
-    expect(r.factors.season_factor).toBe(0.85);
+    expect(r.factors.season_factor).toBe(0.9);
   });
 });
 
 // ---------- 複合計算 ----------
 describe('複合計算', () => {
-  it('夏 + large (屋内): 5 × 1.3 × 0.925 ≈ 6日', () => {
+  it('夏 + large (屋内): 5 × 1.3 × 0.95 ≈ 6日', () => {
     const r = calculateWateringSchedule(null, FOLIAGE, 'large', SUMMER);
     expect(r.adjusted_interval_days).toBe(Math.max(1, Math.round(5 * 1.3 * INDOOR_SUMMER_SEASON)));
   });
 
-  it('冬 + small (屋内): 5 × 0.8 × 1.2 = 4.8 → 5日', () => {
+  it('冬 + small (屋内): 5 × 0.8 × 1.3 = 5.2 → 5日', () => {
     const r = calculateWateringSchedule(null, FOLIAGE, 'small', WINTER);
     expect(r.adjusted_interval_days).toBe(Math.max(1, Math.round(5 * 0.8 * INDOOR_WINTER_SEASON)));
   });
@@ -107,7 +107,7 @@ describe('複合計算', () => {
 // ---------- 最低間隔保証 ----------
 describe('最低間隔保証', () => {
   it('計算結果が<1でも最低1日を保証', () => {
-    // 1 * 0.8 (small) * 0.925 (summer indoor) = 0.74 → round→1 → clamp→1
+    // 1 * 0.8 (small) * 0.95 (summer indoor) = 0.76 → round→1 → clamp→1
     const r = calculateWateringSchedule(null, TINY, 'small', SUMMER);
     expect(r.adjusted_interval_days).toBeGreaterThanOrEqual(1);
   });
